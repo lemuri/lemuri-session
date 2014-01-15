@@ -1,0 +1,59 @@
+<!DOCTYPE node PUBLIC
+"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd" [
+  <!ENTITY ERROR_GENERAL "org.freedesktop.PackageKit.Denied">
+]>
+<node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
+
+  <interface name="org.lemuri.session.unit">
+    <doc:doc>
+      <doc:description>
+        <doc:para>
+          The interface used for quering the session manager
+        </doc:para>
+      </doc:description>
+    </doc:doc>
+
+    <property name="Name" type="s" access="read">
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+          The name of the unit.
+          </doc:para>
+        </doc:description>
+      </doc:doc>
+    </property>
+    <property name="State" type="u" access="read">
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+              The QProcess::State of the give unit
+          </doc:para>
+        </doc:description>
+      </doc:doc>
+    </property>
+
+    <method name="Stop">
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            This method stops the running unit
+          </doc:para>
+        </doc:description>
+      </doc:doc>
+    </method>
+
+    <method name="Start">
+      <doc:doc>
+        <doc:description>
+          <doc:para>
+            This method starts the running unit
+          </doc:para>
+        </doc:description>
+      </doc:doc>
+    </method>
+
+  </interface>
+
+</node>
+

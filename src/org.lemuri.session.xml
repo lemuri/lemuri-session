@@ -1,0 +1,19 @@
+<!DOCTYPE node PUBLIC
+"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd" [
+  <!ENTITY ERROR_GENERAL "org.freedesktop.PackageKit.Denied">
+]>
+<node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
+
+  <interface name="org.lemuri.session">
+    <doc:doc>
+      <doc:description>
+        <doc:para>
+          The interface used for quering the session manager
+        </doc:para>
+      </doc:description>
+    </doc:doc>
+  </interface>
+
+</node>
+
