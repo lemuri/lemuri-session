@@ -22,6 +22,8 @@
 #include "sessioninterface.h"
 
 #include <QDirIterator>
+#include <QFileSystemWatcher>
+#include <QStringBuilder>
 #include <QProcess>
 #include <QTimer>
 #include <QDebug>
@@ -88,9 +90,35 @@ void SessionManager::windowManagerStarted()
     loadShell();
 }
 
+void SessionManager::loadUnits()
+{
+    QStringList paths;
+
+    QString xdgConfigHome = qgetenv("XDG_CONFIG_HOME");
+    if (xdgConfigHome.isNull()) {
+        xdgConfigHome = QDir::homePath() % QLatin1String("/.config");
+    }
+    paths.append(xdgConfigHome);
+
+    QString xdgConfigDirs = qgetenv("XDG_CONFIG_DIRS");
+    if (xdgConfigDirs.isNull()) {
+        xdgConfigDirs = QLatin1String("/etc/xdg/autostart");
+    }
+    foreach (const QString &paths, container) {
+
+    }
+    paths.append(xdgConfigHome);
+
+
+    QString unitsPath = QLatin1String("/etc/lemuri/") % sessionName % QLatin1String(".d");
+
+    QFileSystemWatcher *watcher = new QFileSystemWatcher(paths, this);
+
+}
+
 void SessionManager::loadShell()
 {
-    QString sessionPath = UnitLauncher::configPath(UnitLauncher::Session, m_sessionName);
+    QString sessionPath = UnitLauncher::configPath(m_sessionName);
     qDebug() << "Load shell units" << sessionPath;
 
     createUnits(m_shellUnits, UnitLauncher::Session, sessionPath, m_sessionName);
@@ -182,10 +210,8 @@ void SessionManager::servicesStarted()
 
 void SessionManager::loadAutostart()
 {
-    createUnits(m_autostartUnits, UnitLauncher::Autostart,
-                QLatin1String("/etc/xdg/autostart"), m_sessionName);
-    createUnits(m_autostartUnits, UnitLauncher::Autostart,
-                QLatin1String("/usr/share/autostart"), m_sessionName);
+    createUnits(QLatin1String("/etc/xdg/autostart"), m_sessionName);
+    createUnits(QLatin1String("/usr/share/autostart"), m_sessionName);
 }
 
 void SessionManager::autostartStarted()
@@ -193,15 +219,14 @@ void SessionManager::autostartStarted()
 
 }
 
-void SessionManager::createUnits(QHash<QString, UnitLauncher *> &units, UnitLauncher::Kind kind, const QString &path, const QString &sessionName)
+void SessionManager::createUnits(const QString &path, const QString &sessionName)
 {
     QDirIterator it(path, QDir::Files);
     while (it.hasNext()) {
         qDebug() << it.next();
-        if (!units.contains(it.filePath())) {
+        if (!m_units.contains(it.fileName())) {
             UnitLauncher *launcher = new UnitLauncher(it.filePath(),
                                                       sessionName,
-                                                      kind,
                                                       this);
             if (!launcher->isValid()) {
                 delete launcher;
@@ -210,8 +235,24 @@ void SessionManager::createUnits(QHash<QString, UnitLauncher *> &units, UnitLaun
 
             connect(launcher, &UnitLauncher::started,
                     this, &SessionManager::unitStarted);
-            launcher->Start();
-            units.insert(it.filePath(), launcher);
+            switch (launcher->type()) {
+            case UnitLauncher::Shell:
+                connect(this, &SessionManager::startShellUnits,
+                        launcher, &UnitLauncher::Start);
+                break;
+            case UnitLauncher::Service:
+                connect(this, &SessionManager::startServiceUnits,
+                        launcher, &UnitLauncher::Start);
+                break;
+            case UnitLauncher::Application:
+                connect(this, &SessionManager::startApplicationUnits,
+                        launcher, &UnitLauncher::Start);
+                break;
+            default:
+                qCritical() << "Unit type not recognized!";
+                break;
+            }
+            m_units.insert(it.fileName(), launcher);
         }
     }
 }
@@ -219,14 +260,14 @@ void SessionManager::createUnits(QHash<QString, UnitLauncher *> &units, UnitLaun
 void SessionManager::unitStarted()
 {
     UnitLauncher *launcher = qobject_cast<UnitLauncher*>(sender());
-    switch (launcher->kind()) {
-    case UnitLauncher::Session:
+    switch (launcher->type()) {
+    case UnitLauncher::Shell:
         shellStarted();
         break;
     case UnitLauncher::Service:
         servicesStarted();
         break;
-    case UnitLauncher::Autostart:
+    case UnitLauncher::Application:
         autostartStarted();
         break;
     default:

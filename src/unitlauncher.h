@@ -30,18 +30,20 @@ class UnitLauncher : public QObject
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.foo.session.unit")
 public:
-    enum Kind {
-        Session,
+    enum Type {
+        Unknown,
+        Custom,
+        SessionSetup,
+        Shell,
         Service,
-        Autostart,
-        Custom
+        Application
     };
 
-    explicit UnitLauncher(const QString &filename, const QString &session, Kind kind, QObject *parent);
+    explicit UnitLauncher(const QString &filename, const QString &session, QObject *parent);
     explicit UnitLauncher(const QString &program, QObject *parent);
     virtual ~UnitLauncher();
 
-    Kind kind() const;
+    Type type() const;
 
     Q_PROPERTY(QString Name READ name)
     QString name() const;
@@ -51,7 +53,7 @@ public:
 
     bool isValid() const;
 
-    static QString configPath(Kind kind, const QString &sessionName);
+    static QString configPath(const QString &sessionName);
 
 public Q_SLOTS:
     void Stop();
@@ -73,6 +75,7 @@ private slots:
 private:
     QSettings m_settings;
     QString m_session;
+    QString m_name;
     QStringList m_dbusSessionRequires;
     QStringList m_dbusSessionRequiresRunning;
     QStringList m_dbusSystemRequires;
@@ -80,9 +83,9 @@ private:
     QStringList m_onlyShowIn;
     QString m_exec;
     QString m_dbusExec;
-    QProcess *m_process;
-    int m_crashCount;
-    Kind m_kind;
+    QProcess *m_process = 0;
+    int m_crashCount = 0;
+    Type m_type = Unknown;
     bool m_enabled;
     bool m_shutdownOnMissingDeps;
 };

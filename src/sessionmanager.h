@@ -42,8 +42,15 @@ public:
     void setWindowManager(const QString &windowManager);
     void init();
 
+Q_SIGNALS:
+    void startShellUnits();
+    void startServiceUnits();
+    void startApplicationUnits();
+
 private Q_SLOTS:
     void windowManagerStarted();
+
+    void loadUnits();
 
     /**
      * @brief loadShell
@@ -76,7 +83,7 @@ private Q_SLOTS:
     void loadAutostart();
     void autostartStarted();
 
-    void createUnits(QHash<QString, UnitLauncher *> &units, UnitLauncher::Kind kind, const QString &path, const QString &sessionName);
+    void createUnits(const QString &path, const QString &sessionName);
     void unitStarted();
 
     int m_state;
@@ -86,6 +93,8 @@ private Q_SLOTS:
     QString m_windowManager;
     UnitLauncher *m_windowManagerUnit;
     QSettings m_setting;
+    QHash<QString, UnitLauncher *> m_units;
+
     QHash<QString, UnitLauncher *> m_shellUnits;
     QTimer *m_shellTimeout = 0;
     QHash<QString, UnitLauncher *> m_serviceUnits;

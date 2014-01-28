@@ -26,13 +26,10 @@
 #include <QDBusServiceWatcher>
 #include <QRegularExpression>
 
-UnitLauncher::UnitLauncher(const QString &filename, const QString &session, UnitLauncher::Kind kind, QObject *parent) :
+UnitLauncher::UnitLauncher(const QString &filename, const QString &session, QObject *parent) :
     QObject(parent),
     m_settings(filename, QSettings::IniFormat),
-    m_session(session),
-    m_process(0),
-    m_crashCount(0),
-    m_kind(kind)
+    m_session(session)
 {
     m_settings.beginGroup(QLatin1String("Desktop Entry"));
 
@@ -54,6 +51,17 @@ UnitLauncher::UnitLauncher(const QString &filename, const QString &session, Unit
     m_exec = m_settings.value(QLatin1String("Exec")).toString().trimmed();
     m_dbusExec = m_settings.value(QLatin1String("DBusExec")).toString().trimmed();
     m_enabled = m_settings.value(QLatin1String("Enabled")).toBool();
+
+    QString type = m_settings.value(QLatin1String("Type")).toString().trimmed();
+    if (type == QLatin1String("Application")) {
+        m_type = Application;
+    } else if (type == QLatin1String("Service")) {
+        m_type = Service;
+    } else if (type == QLatin1String("Shell")) {
+        m_type = Shell;
+    } else {
+        m_type = Unknown;
+    }
 
     if (m_dbusExec.isEmpty()) {
         m_process = new QProcess(this);
@@ -80,13 +88,21 @@ UnitLauncher::UnitLauncher(const QString &filename, const QString &session, Unit
 
     QFileInfo fileInfo(filename);
     QString unit = fileInfo.baseName().replace(QRegularExpression("\\W"), QLatin1String("_"));
-    if (kind == Session) {
-        setObjectName("/org/lemuri/session_units/" % unit);
-    } else if (kind == Autostart) {
-        setObjectName("/org/lemuri/autostart_units/" % unit);
-    } else {
+    switch (m_type) {
+    case Service:
         setObjectName("/org/lemuri/service_units/" % unit);
+        break;
+    case Application:
+        setObjectName("/org/lemuri/application_units/" % unit);
+        break;
+    case Shell:
+        setObjectName("/org/lemuri/shell_units/" % unit);
+        break;
+    default:
+        setObjectName("/org/lemuri/unknown_units/" % unit);
+        break;
     }
+    m_name = fileInfo.fileName();
 
     registerObject();
 }
@@ -94,8 +110,8 @@ UnitLauncher::UnitLauncher(const QString &filename, const QString &session, Unit
 UnitLauncher::UnitLauncher(const QString &program, QObject *parent) :
     QObject(parent),
     m_process(new QProcess),
-    m_crashCount(0),
-    m_kind(Custom),
+    m_name(program),
+    m_type(Custom),
     m_exec(program)
 {
     QString unit = program;
@@ -114,14 +130,14 @@ UnitLauncher::~UnitLauncher()
     }
 }
 
-UnitLauncher::Kind UnitLauncher::kind() const
+UnitLauncher::Type UnitLauncher::type() const
 {
-    return m_kind;
+    return m_type;
 }
 
 QString UnitLauncher::name() const
 {
-    return objectName();
+    return m_name;
 }
 
 QProcess::ProcessState UnitLauncher::state() const
@@ -139,16 +155,16 @@ bool UnitLauncher::isValid() const
         return false;
     }
 
+    if (m_type == Unknown) {
+        return false;
+    }
+
     return true;
 }
 
-QString UnitLauncher::configPath(UnitLauncher::Kind kind, const QString &sessionName)
+QString UnitLauncher::configPath(const QString &sessionName)
 {
-    if (kind == Session) {
-        return QLatin1String("/etc/lemuri/session/") % sessionName;
-    } else {
-        return QLatin1String("/etc/lemuri/service/") % sessionName;
-    }
+    return QLatin1String("/etc/lemuri/") % sessionName % QLatin1String(".d");
 }
 
 void UnitLauncher::Stop()
